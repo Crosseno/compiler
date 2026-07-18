@@ -1,0 +1,16 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Crosseno\Compiler\Application\CommandLineApplication;
+
+$autoload = __DIR__ . '/../vendor/autoload.php';
+if (!is_file($autoload)) {
+    fwrite(STDERR, "Composer dependencies are not installed.\n");
+    exit(1);
+}
+require $autoload;
+
+/** @var list<string> $argv */
+exit((new CommandLineApplication())->run($argv));

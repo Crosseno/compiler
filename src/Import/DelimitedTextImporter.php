@@ -40,16 +40,20 @@ final readonly class DelimitedTextImporter extends AbstractFileImporter
             if (!\is_array($header) || \count($header) > $limits->maximumFields) {
                 throw new InvalidSourceRecord('Delimited source requires a bounded header row.');
             }
+            /** @var list<string> $headerNames */
+            $headerNames = [];
             foreach ($header as $name) {
                 if (!\is_string($name)) {
                     throw new InvalidSourceRecord('Delimited source header names must be strings.');
                 }
+                $headerNames[] = $name;
             }
-            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]) ?? $header[0];
-            if (\count(array_unique($header)) !== \count($header)) {
+            $firstHeader = $headerNames[0] ?? throw new InvalidSourceRecord('Delimited source requires a header row.');
+            $headerNames[0] = preg_replace('/^\xEF\xBB\xBF/', '', $firstHeader) ?? $firstHeader;
+            if (\count(array_unique($headerNames)) !== \count($headerNames)) {
                 throw new InvalidSourceRecord('Delimited source header names must be unique.');
             }
-            foreach ($header as $name) {
+            foreach ($headerNames as $name) {
                 if (!\is_string($name) || preg_match('/^[a-z][a-z0-9_]*$/D', $name) !== 1) {
                     throw new InvalidSourceRecord('Delimited source contains an invalid header name.');
                 }
@@ -59,12 +63,12 @@ final readonly class DelimitedTextImporter extends AbstractFileImporter
             while (($row = fgetcsv($handle, $maximumLineBytes, $this->delimiter, '"', '')) !== false) {
                 ++$number;
                 $this->assertRecord($number, $limits);
-                if (\count($row) !== \count($header)) {
+                if (\count($row) !== \count($headerNames)) {
                     throw new InvalidSourceRecord(\sprintf('%s record %d has the wrong field count.', $source->sourceId, $number));
                 }
                 // Formula prefixes are lexical data: preserve them exactly, never evaluate them.
                 /** @var array<string, mixed> $data */
-                $data = array_combine($header, $row);
+                $data = array_combine($headerNames, $row);
                 yield $this->mapper->map($data, $source->sourceId, $number, $limits);
             }
         } finally {

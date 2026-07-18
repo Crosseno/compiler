@@ -8,6 +8,7 @@ use Crosseno\Compiler\Exception\InvalidSourceRecord;
 use Crosseno\Compiler\Import\DelimitedTextImporter;
 use Crosseno\Compiler\Import\ImportLimits;
 use Crosseno\Compiler\Import\JsonImporter;
+use Crosseno\Compiler\Import\RecordMapper;
 use Crosseno\Compiler\Import\SourceInput;
 use PHPUnit\Framework\TestCase;
 
@@ -48,5 +49,29 @@ final class ImporterTest extends TestCase
 
         $this->expectException(InvalidSourceRecord::class);
         iterator_to_array((new JsonImporter())->import(new SourceInput($path, 'fixture'), new ImportLimits()));
+    }
+
+    public function testNestedClueTextHonorsTheFieldByteLimit(): void
+    {
+        $this->expectException(InvalidSourceRecord::class);
+        $this->expectExceptionMessage('text exceeds the field byte limit');
+
+        (new RecordMapper())->map([
+            'answer' => 'CAT',
+            'language' => 'en',
+            'clues' => [['language' => 'en', 'text' => '12345']],
+        ], 'fixture', 1, new ImportLimits(maximumFieldBytes: 4));
+    }
+
+    public function testIndividualListValuesHonorTheFieldByteLimit(): void
+    {
+        $this->expectException(InvalidSourceRecord::class);
+        $this->expectExceptionMessage('answer_classes contains a value that exceeds the field byte limit');
+
+        (new RecordMapper())->map([
+            'answer' => 'CAT',
+            'language' => 'en',
+            'answer_classes' => ['12345'],
+        ], 'fixture', 1, new ImportLimits(maximumFieldBytes: 4));
     }
 }

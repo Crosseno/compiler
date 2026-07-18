@@ -14,14 +14,8 @@ final readonly class RecordMapper
         if (\count($data) > $limits->maximumFields) {
             throw new InvalidSourceRecord($this->at($sourceId, $number, 'too many fields'));
         }
-        foreach ($data as $value) {
-            if (\is_string($value) && \strlen($value) > $limits->maximumFieldBytes) {
-                throw new InvalidSourceRecord($this->at($sourceId, $number, 'field exceeds byte limit'));
-            }
-        }
-
-        $answer = $this->requiredString($data, 'answer', $sourceId, $number);
-        $lemma = $this->optionalString($data, 'lemma') ?? $answer;
+        $answer = $this->requiredString($data, 'answer', $sourceId, $number, $limits);
+        $lemma = $this->optionalString($data, 'lemma', $limits) ?? $answer;
         $clues = [];
         if (isset($data['clues'])) {
             if (!\is_array($data['clues']) || !array_is_list($data['clues'])) {
@@ -32,14 +26,14 @@ final readonly class RecordMapper
                     throw new InvalidSourceRecord($this->at($sourceId, $number, 'clue must be an object'));
                 }
                 $clues[] = new RawClue(
-                    $this->requiredString($clue, 'language', $sourceId, $number),
-                    $this->requiredString($clue, 'text', $sourceId, $number),
+                    $this->requiredString($clue, 'language', $sourceId, $number, $limits),
+                    $this->requiredString($clue, 'text', $sourceId, $number, $limits),
                     $this->nullableInteger($clue['difficulty'] ?? null, 'clue difficulty', 0, 100),
                 );
             }
-        } elseif (($clueText = $this->optionalString($data, 'clue')) !== null) {
+        } elseif (($clueText = $this->optionalString($data, 'clue', $limits)) !== null) {
             $clues[] = new RawClue(
-                $this->optionalString($data, 'clue_language') ?? $this->requiredString($data, 'language', $sourceId, $number),
+                $this->optionalString($data, 'clue_language', $limits) ?? $this->requiredString($data, 'language', $sourceId, $number, $limits),
                 $clueText,
                 $this->nullableInteger($data['clue_difficulty'] ?? null, 'clue difficulty', 0, 100),
             );
@@ -50,25 +44,25 @@ final readonly class RecordMapper
             $number,
             $answer,
             $lemma,
-            $this->requiredString($data, 'language', $sourceId, $number),
-            $this->optionalString($data, 'part_of_speech'),
-            $this->optionalString($data, 'sense_id'),
-            $this->optionalString($data, 'definition'),
+            $this->requiredString($data, 'language', $sourceId, $number, $limits),
+            $this->optionalString($data, 'part_of_speech', $limits),
+            $this->optionalString($data, 'sense_id', $limits),
+            $this->optionalString($data, 'definition', $limits),
             $this->integer($data['frequency'] ?? 0, 'frequency', 0, PHP_INT_MAX),
             $this->nullableInteger($data['difficulty'] ?? null, 'difficulty', 0, 100),
             $this->enum($data['proper_name'] ?? 'unknown', 'proper_name'),
             $this->enum($data['abbreviation'] ?? 'unknown', 'abbreviation'),
-            $this->stringList($data['answer_classes'] ?? ['standard'], 'answer_classes'),
-            $this->stringList($data['dialects'] ?? [], 'dialects'),
-            $this->stringList($data['themes'] ?? [], 'themes'),
+            $this->stringList($data['answer_classes'] ?? ['standard'], 'answer_classes', $limits),
+            $this->stringList($data['dialects'] ?? [], 'dialects', $limits),
+            $this->stringList($data['themes'] ?? [], 'themes', $limits),
             $clues,
         );
     }
 
     /** @param array<mixed, mixed> $data */
-    private function requiredString(array $data, string $key, string $source, int $number): string
+    private function requiredString(array $data, string $key, string $source, int $number, ImportLimits $limits): string
     {
-        $value = $this->optionalString($data, $key);
+        $value = $this->optionalString($data, $key, $limits);
         if ($value === null) {
             throw new InvalidSourceRecord($this->at($source, $number, $key . ' is required'));
         }
@@ -77,13 +71,19 @@ final readonly class RecordMapper
     }
 
     /** @param array<mixed, mixed> $data */
-    private function optionalString(array $data, string $key): ?string
+    private function optionalString(array $data, string $key, ImportLimits $limits): ?string
     {
         $value = $data[$key] ?? null;
         if ($value === null || $value === '') {
             return null;
         }
-        if (!\is_string($value) || preg_match('//u', $value) !== 1 || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', $value) === 1) {
+        if (!\is_string($value)) {
+            throw new InvalidSourceRecord($key . ' must be valid UTF-8 without control characters.');
+        }
+        if (\strlen($value) > $limits->maximumFieldBytes) {
+            throw new InvalidSourceRecord($key . ' exceeds the field byte limit.');
+        }
+        if (preg_match('//u', $value) !== 1 || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', $value) === 1) {
             throw new InvalidSourceRecord($key . ' must be valid UTF-8 without control characters.');
         }
 
@@ -117,7 +117,7 @@ final readonly class RecordMapper
     }
 
     /** @return list<string> */
-    private function stringList(mixed $value, string $label): array
+    private function stringList(mixed $value, string $label, ImportLimits $limits): array
     {
         if (\is_string($value)) {
             $value = $value === '' ? [] : explode('|', $value);
@@ -127,7 +127,13 @@ final readonly class RecordMapper
         }
         $result = [];
         foreach ($value as $item) {
-            if (!\is_string($item) || $item === '' || preg_match('//u', $item) !== 1) {
+            if (!\is_string($item) || $item === '') {
+                throw new InvalidSourceRecord($label . ' contains an invalid value.');
+            }
+            if (\strlen($item) > $limits->maximumFieldBytes) {
+                throw new InvalidSourceRecord($label . ' contains a value that exceeds the field byte limit.');
+            }
+            if (preg_match('//u', $item) !== 1 || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', $item) === 1) {
                 throw new InvalidSourceRecord($label . ' contains an invalid value.');
             }
             $result[$item] = $item;

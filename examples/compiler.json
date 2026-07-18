@@ -1,0 +1,31 @@
+{
+  "schema": "crosseno-compiler-config",
+  "version": 1,
+  "metadata": {
+    "packId": "example.en",
+    "answerLanguage": "en",
+    "dataVersion": "2026.07.1",
+    "normalizationProfileId": "nfc-v1",
+    "tokenizationProfileId": "grapheme-v1",
+    "stableKeyAlgorithmVersion": 1
+  },
+  "stableKeyNamespace": "example",
+  "compatibility": {"minimumCoreVersion": "0.1.0", "minimumLexiconVersion": "0.1.0"},
+  "compilerVersion": "0.1.0",
+  "sources": [{
+    "path": "words.csv",
+    "format": "csv",
+    "provenance": {
+      "id": "example",
+      "url": "https://example.com/words.csv",
+      "versionOrDate": "2026-07",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "licenseExpression": "CC0-1.0",
+      "attribution": "Example lexical source",
+      "transformation": "NFC normalization and grapheme tokenization",
+      "redistributionStatus": "redistributable"
+    }
+  }],
+  "failOnRejection": false,
+  "ordinalSpaceId": "example-en-2026-07-1"
+}

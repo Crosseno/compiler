@@ -1,0 +1,23 @@
+PRAGMA application_id = 1129467731;
+PRAGMA user_version = 1000;
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE package_metadata (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), schema_major INTEGER NOT NULL CHECK (schema_major = 1), schema_minor INTEGER NOT NULL CHECK (schema_minor >= 0), pack_id TEXT NOT NULL, data_version TEXT NOT NULL, answer_language TEXT NOT NULL, normalization_profile_id TEXT NOT NULL, tokenization_profile_id TEXT NOT NULL, stable_key_algorithm_version INTEGER NOT NULL CHECK (stable_key_algorithm_version > 0), stable_key_digest TEXT NOT NULL CHECK (length(stable_key_digest) = 64), ordinal_space_id TEXT NOT NULL, answer_count INTEGER NOT NULL CHECK (answer_count >= 0), index_pack_id TEXT NOT NULL, index_data_version TEXT NOT NULL, index_answer_count INTEGER NOT NULL CHECK (index_answer_count >= 0), index_stable_key_digest TEXT NOT NULL CHECK (length(index_stable_key_digest) = 64), index_tokenization_profile_id TEXT NOT NULL) STRICT;
+CREATE TABLE source (id TEXT PRIMARY KEY, url TEXT NOT NULL, version_or_date TEXT NOT NULL, license_expression TEXT NOT NULL, attribution TEXT NOT NULL, transformation TEXT NOT NULL, redistribution_status TEXT NOT NULL) STRICT, WITHOUT ROWID;
+CREATE TABLE lexeme (key TEXT PRIMARY KEY, lemma TEXT NOT NULL, language TEXT NOT NULL, part_of_speech TEXT) STRICT, WITHOUT ROWID;
+CREATE TABLE answer (key TEXT PRIMARY KEY, display_text TEXT NOT NULL, difficulty INTEGER CHECK (difficulty BETWEEN 0 AND 100), proper_name TEXT NOT NULL CHECK (proper_name IN ('yes', 'no', 'unknown')), abbreviation TEXT NOT NULL CHECK (abbreviation IN ('yes', 'no', 'unknown')), rank INTEGER NOT NULL) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_cell (answer_key TEXT NOT NULL REFERENCES answer(key), position INTEGER NOT NULL CHECK (position >= 0), symbol TEXT NOT NULL CHECK (length(symbol) > 0), PRIMARY KEY (answer_key, position)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_class (answer_key TEXT NOT NULL REFERENCES answer(key), class TEXT NOT NULL, PRIMARY KEY (answer_key, class)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_dialect (answer_key TEXT NOT NULL REFERENCES answer(key), language TEXT NOT NULL, PRIMARY KEY (answer_key, language)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_clue_coverage (answer_key TEXT NOT NULL REFERENCES answer(key), language TEXT NOT NULL, PRIMARY KEY (answer_key, language)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_theme (answer_key TEXT NOT NULL REFERENCES answer(key), theme TEXT NOT NULL, PRIMARY KEY (answer_key, theme)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_lexeme (answer_key TEXT PRIMARY KEY REFERENCES answer(key), lexeme_key TEXT NOT NULL REFERENCES lexeme(key)) STRICT, WITHOUT ROWID;
+CREATE INDEX answer_lexeme_lexeme_idx ON answer_lexeme (lexeme_key, answer_key);
+CREATE TABLE sense (key TEXT PRIMARY KEY, lexeme_key TEXT NOT NULL REFERENCES lexeme(key), definition TEXT NOT NULL, source_id TEXT REFERENCES source(id)) STRICT, WITHOUT ROWID;
+CREATE TABLE answer_sense (answer_key TEXT NOT NULL REFERENCES answer(key), sense_key TEXT NOT NULL REFERENCES sense(key), PRIMARY KEY (answer_key, sense_key)) STRICT, WITHOUT ROWID;
+CREATE INDEX answer_sense_sense_idx ON answer_sense (sense_key, answer_key);
+CREATE TABLE clue (id TEXT PRIMARY KEY, sense_key TEXT NOT NULL REFERENCES sense(key), language TEXT NOT NULL, text TEXT NOT NULL, difficulty INTEGER CHECK (difficulty BETWEEN 0 AND 100)) STRICT, WITHOUT ROWID;
+CREATE INDEX clue_sense_language_idx ON clue (sense_key, language, id);
+CREATE TABLE topic (id TEXT PRIMARY KEY, label TEXT NOT NULL) STRICT, WITHOUT ROWID;
+CREATE TABLE sense_topic (sense_key TEXT NOT NULL REFERENCES sense(key), topic_id TEXT NOT NULL REFERENCES topic(id), PRIMARY KEY (sense_key, topic_id)) STRICT, WITHOUT ROWID;
+CREATE INDEX sense_topic_topic_idx ON sense_topic (topic_id, sense_key);

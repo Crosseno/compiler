@@ -1,0 +1,37 @@
+{
+    "name": "crosseno/compiler",
+    "description": "Deterministic offline compilation of raw lexical data into immutable Crosseno language packs.",
+    "type": "library",
+    "license": "MIT",
+    "repositories": [
+        {"type": "path", "url": "../core", "options": {"symlink": true, "versions": {"crosseno/core": "0.1.0"}}},
+        {"type": "path", "url": "../lexicon", "options": {"symlink": true, "versions": {"crosseno/lexicon": "0.1.0"}}},
+        {"type": "path", "url": "../lexicon-sqlite", "options": {"symlink": true, "versions": {"crosseno/lexicon-sqlite": "0.1.0"}}}
+    ],
+    "require": {
+        "php": "^8.5",
+        "ext-intl": "*",
+        "ext-pdo": "*",
+        "ext-pdo_sqlite": "*",
+        "crosseno/core": "^0.1",
+        "crosseno/lexicon": "^0.1"
+    },
+    "require-dev": {
+        "crosseno/lexicon-sqlite": "^0.1",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpstan/phpstan": "^2.2",
+        "phpunit/phpunit": "^12.5"
+    },
+    "autoload": {"psr-4": {"Crosseno\\Compiler\\": "src/"}},
+    "autoload-dev": {"psr-4": {"Crosseno\\Compiler\\Tests\\": "tests/"}},
+    "bin": ["bin/crosseno-compiler"],
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse --no-progress",
+        "lint": "php-cs-fixer fix --dry-run --diff",
+        "format": "php-cs-fixer fix",
+        "check": ["@lint", "@analyse", "@test"]
+    },
+    "config": {"allow-plugins": {}, "sort-packages": true},
+    "support": {"issues": "https://github.com/Crosseno/compiler/issues", "source": "https://github.com/Crosseno/compiler"}
+}

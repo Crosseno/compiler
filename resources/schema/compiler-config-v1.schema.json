@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crosseno.org/schema/compiler-config-v1.schema.json",
+  "title": "Crosseno compiler configuration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "metadata", "stableKeyNamespace", "compatibility", "compilerVersion", "sources"],
+  "properties": {
+    "schema": {"const": "crosseno-compiler-config"},
+    "version": {"const": 1},
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packId", "answerLanguage", "dataVersion", "normalizationProfileId", "tokenizationProfileId", "stableKeyAlgorithmVersion"],
+      "properties": {
+        "packId": {"type": "string"}, "answerLanguage": {"type": "string"}, "dataVersion": {"type": "string"},
+        "normalizationProfileId": {"type": "string"}, "tokenizationProfileId": {"type": "string"},
+        "stableKeyAlgorithmVersion": {"const": 1}
+      }
+    },
+    "stableKeyNamespace": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,62}$"},
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["minimumCoreVersion", "minimumLexiconVersion"],
+      "properties": {"minimumCoreVersion": {"type": "string"}, "minimumLexiconVersion": {"type": "string"}}
+    },
+    "compilerVersion": {"type": "string"},
+    "sources": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "limits": {"type": "object"},
+    "failOnRejection": {"type": "boolean"},
+    "ordinalSpaceId": {"type": "string"}
+  }
+}
